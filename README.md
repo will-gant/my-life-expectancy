@@ -11,8 +11,9 @@ Historical data on UK mortality come `.csv` files bundled with a [statistical re
 ## Limitations
 
 * Assumes a death date of 1 January where the dataset gives only a year
+* Ignores leap years (i.e. treats all years as if they are 31,536,000 seconds long)
 * Uses UK death statistics even though some ancestors lived part or all of their lives in other countries (e.g. South Africa)
-* Ignores leap years
+* To be consistent with the UK death statistics we're comparing with, filters for ancestors who died aged ten or older. Reasonably confident no direct ancestor of mine managed to reproduce and then die before their tenth birthday in any case!
 
 ## Usage
 
