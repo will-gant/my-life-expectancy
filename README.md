@@ -18,6 +18,7 @@ I had to manually tweak a couple of tiny details (e.g. header names) that weren'
 * Similarly, where only a month and a year are available, assumes the death occured on the 1st of that month
 * Where a death date is recorded as a range of years (e.g. `1905-1907`) assumes that the death date is the midway point between the two
 * Ignores leap years (i.e. assumes years are all 365 days long)
+* Obviously, uses UK death statistics for all ancestors. Apart from the amount of effort that'd be required in obtaining equivalent stats for other countries (assuming they even exist), trying to decide _which_ country's statistics to apply to a given ancestor would be a nightmare. I guess in an ideal world you'd use whichever country they spent the most time in, but suffice to say this is rarely available. Even when locations are given for deaths, births, etc, these may omit the country entirely (e.g. only give a town/city) or use a range of different names (e.g. "England", "United Kingdom" and "UK").
 
 ## Usage
 
