@@ -1,42 +1,41 @@
 # My life expectancy
 
-Ruby script to benchmark the longevity of 68 direct ancestors of mine who died between 1843 and 1998, roughly covering five generations (back to great-great-great grandparents).
+Go script to benchmark the longevity of the direct descendents of the first individual in a [GEDCOM](https://www.gedcom.org/) family tree file against modal and median death ages for the United Kingdom for each ancestor's year of death. For all ancestors who died in years for which ONS statistics are available (i.e. 1841-2010), the diff from the modal and median death ages is calculated. An average is then calculated that weights each ancestor diff base on their proximity to the first individual. i.e. the diffs for the ancestor's parents have twice the weight of those of their grandparents, which in turn have twice the weight of those of their great-grandparents, etc.
+
+GEDCOM files (with a `.ged` extension) can be exported from a number of genealogy websites, such as ancestry.com. I gradually built my own tree over several months, and in my case I have 68 director ancestors (34 men and women) who died in a year covered by the ONS statistics, roughly covering five generations (i.e. back to great-great-great-grandparents).
+
+I previously implemented a simpler version of this in ruby that used a CSV generated from my GEDCOM file by [Gramps](https://gramps-project.org/), but this resulted in the information on generational proximity being lost. As the ruby GEDCOM libraries that I tried seemed like they themselves had passed on to a better place and seemed unable to read my `.ged` file without exploding, I looked at other languages and found a [nice Go package](https://github.com/iand/gedcom) that seemed to be actively maintained and did the job.
 
 ## Data sources
 
-The data on my direct ancestors comes from my family tree on ancestry.com, and was veeeery gradually collated through a mixture of automated processes and manual effort! I then exported this as a `.ged` file and used the desktop app from the open source family tree software [Gramps](https://gramps-project.org/) to generate a `.csv` file that included only direct ancestors.
+Historical data on UK mortality come in `.csv` files bundled with a [statistical release](https://web.archive.org/web/20221124074230/https://www.ons.gov.uk/peoplepopulationandcommunity/birthsdeathsandmarriages/lifeexpectancies/articles/mortalityinenglandandwales/pastandprojectedtrendsinaveragelifespan) of the UK's Office of National Statistics entitled _Mortality in England and Wales: past and projected trends in average lifespan_, published on 5 July 2022.
 
-Historical data on UK mortality come `.csv` files bundled with a [statistical release](https://web.archive.org/web/20221124074230/https://www.ons.gov.uk/peoplepopulationandcommunity/birthsdeathsandmarriages/lifeexpectancies/articles/mortalityinenglandandwales/pastandprojectedtrendsinaveragelifespan) of the UK's Office of National Statistics entitled _Mortality in England and Wales: past and projected trends in average lifespan_, published on 5 July 2022.
+I had to manually tweak a couple of tiny details (e.g. header names) that weren't exactly consistent between the male and female files published by the ONS.
 
-## Limitations
+## Assumptions/limitations
 
 * Assumes a death date of 1 January where the dataset gives only a year
-* Ignores leap years (i.e. treats all years as if they are 31,536,000 seconds long)
-* Uses UK death statistics even though some ancestors lived part or all of their lives in other countries (e.g. South Africa)
-* To be consistent with the UK death statistics we're comparing with, filters for ancestors who died aged ten or older. Reasonably confident no direct ancestor of mine managed to reproduce and then die before their tenth birthday in any case!
+* Similarly, where only a month and a year are available, assumes the death occured on the 1st of that month
+* Where a death date is recorded as a range of years (e.g. `1905-1907`) assumes that the death date is the midway point between the two
+* Ignores leap years (i.e. assumes years are all 365 days long)
 
 ## Usage
 
+Here's the cheerful result that I get using my own family tree:
+
 ```console
-$ ruby lib/predict_death.rb --ancestors direct-ancestors.csv --male-death-stats male_death_stats.csv --female-death-stats female_death_stats.csv
-
-male ancestors in the provided dataset lived 3.57 fewer years than the UK's male modal age of death in the year they died (18/34 outlived the mode)
-male ancestors in the provided dataset lived 13.72 more years than the UK's male median age of death in the year they died (29/34 outlived the median)
-Calculated from 34 male ancestors who died between 1849 and 1993
-
-female ancestors in the provided dataset lived 3.29 fewer years than the UK's female modal age of death in the year they died (20/34 outlived the mode)
-female ancestors in the provided dataset lived 10.36 more years than the UK's female median age of death in the year they died (27/34 outlived the median)
-Calculated from 34 female ancestors who died between 1843 and 1998
+$ % go run predict-death.go --tree-file tree.ged
+===========================================================================================
+Stat                                Male               Female             Overall
+Difference from Median Death Age    7 years 126 days   5 years 154 days   6 years 135 days
+Difference from Modal Age at Death  -4 years 148 days  -4 years 226 days  -4 years 188 days
+===========================================================================================
 ```
 
 ## Tests
 
 ```console
-$ bundle install
-$ bundle exec rspec
-
-.............
-
-Finished in 0.00802 seconds (files took 0.13782 seconds to load)
-13 examples, 0 failures
+$ go test
+PASS
+ok  	predict-death	0.153s
 ```
