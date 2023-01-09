@@ -37,6 +37,8 @@ type AncestorDeath struct {
 	ModalAgeAtDeathDiffDays  int
 }
 
+var months = []string{"January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"}
+
 func calculateWeightedAverages(ancestors []AncestorDeath, gender string) (int, int, int) {
 	var totalLifeExpectancyDiffDays, totalMedianAgeAtDeathDiffDays, totalModalAgeAtDeathDiffDays int
 	var weightSum int
@@ -78,20 +80,31 @@ func checkValidYear(dateStr string) error {
 	return nil
 }
 
-func parseDate(dateStr string) (time.Time, error) {
-	err := checkValidYear(dateStr)
+func yearRangeMidpoint(dateStr string) (time.Time, error) {
+	dateStr = strings.ReplaceAll(dateStr, " ", "")
+	parts := strings.Split(dateStr, "-")
+	if len(parts) != 2 {
+		return time.Time{}, fmt.Errorf("invalid date range: %s", dateStr)
+	}
+	startYear, err := strconv.Atoi(parts[0])
 	if err != nil {
-		return time.Time{}, fmt.Errorf("no valid year found in date: %s", err)
+		return time.Time{}, fmt.Errorf("invalid start year in date range: %s", dateStr)
 	}
+	endYear, err := strconv.Atoi(parts[1])
+	if err != nil {
+		return time.Time{}, fmt.Errorf("invalid end year in date range: %s", dateStr)
+	}
+	start := time.Date(startYear, 1, 1, 0, 0, 0, 0, time.UTC)
+	end := time.Date(endYear, 1, 1, 0, 0, 0, 0, time.UTC)
+	midpoint := start.Add(end.Sub(start) / 2)
+	return midpoint, nil
+}
 
-	dateStr = strings.TrimSpace(dateStr)
-	if strings.Contains(dateStr, "Unknown") {
-		return time.Time{}, fmt.Errorf("date is \"%s\"", dateStr)
-	}
-	dateStr = strings.TrimSpace(dateStr)
+func cleanDate(dateStr string) string {
+	dateSuffixRegex := regexp.MustCompile(`([1-9])(st|nd|th|rd)`)
+	dateStr = dateSuffixRegex.ReplaceAllString(dateStr, "$1")
 	dateStr = strings.ReplaceAll(dateStr, "  ", " ")
 
-	months := []string{"January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"}
 	for _, month := range months {
 		monthAbbr := month[:3]
 
@@ -104,6 +117,16 @@ func parseDate(dateStr string) (time.Time, error) {
 			dateStr = regex.ReplaceAllString(dateStr, month)
 		}
 	}
+	return dateStr
+}
+
+func parseDate(dateStr string) (time.Time, error) {
+	err := checkValidYear(dateStr)
+	if err != nil {
+		return time.Time{}, fmt.Errorf("no valid year found in date: %s", err)
+	}
+
+	dateStr = cleanDate(dateStr)
 
 	foundMonth := false
 	for _, month := range months {
@@ -124,27 +147,12 @@ func parseDate(dateStr string) (time.Time, error) {
 
 	yearRangeRegex := regexp.MustCompile(`(\d{4})\s*-\s*(\d{4})`)
 	if yearRangeRegex.MatchString(dateStr) {
-		dateStr = strings.ReplaceAll(dateStr, " ", "")
-		parts := strings.Split(dateStr, "-")
-		if len(parts) != 2 {
-			return time.Time{}, fmt.Errorf("invalid date range: %s", dateStr)
-		}
-		startYear, err := strconv.Atoi(parts[0])
+		parsedDate, err := yearRangeMidpoint(dateStr)
 		if err != nil {
-			return time.Time{}, fmt.Errorf("invalid start year in date range: %s", dateStr)
+			return time.Time{}, fmt.Errorf("failed to find midpoint date in year range '%s': %s", dateStr, err)
 		}
-		endYear, err := strconv.Atoi(parts[1])
-		if err != nil {
-			return time.Time{}, fmt.Errorf("invalid end year in date range: %s", dateStr)
-		}
-		start := time.Date(startYear, 1, 1, 0, 0, 0, 0, time.UTC)
-		end := time.Date(endYear, 1, 1, 0, 0, 0, 0, time.UTC)
-		midpoint := start.Add(end.Sub(start) / 2)
-		return midpoint, nil
+		return parsedDate, nil
 	}
-
-	dateSuffixRegex := regexp.MustCompile(`(1|2)(st|nd|th)`)
-	dateStr = dateSuffixRegex.ReplaceAllString(dateStr, "$1")
 
 	for _, month := range months {
 		if strings.Contains(dateStr, month) && !regexp.MustCompile(`\b\d{1,2} `+month).MatchString(dateStr) {

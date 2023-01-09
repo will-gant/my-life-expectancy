@@ -144,6 +144,43 @@ func TestGetDeathStatsForAncestors(t *testing.T) {
 
 }
 
+func TestYearRangeMidpoint(t *testing.T) {
+	testCases := map[string]time.Time{
+		"2005-2007":   time.Date(2006, 1, 1, 0, 0, 0, 0, time.UTC),
+		"2004 - 2007": time.Date(2005, 7, 2, 0, 0, 0, 0, time.UTC),
+		"1900-  1950": time.Date(1925, 1, 1, 0, 0, 0, 0, time.UTC),
+	}
+
+	for dateStr, expectedParsedDate := range testCases {
+		t.Run(dateStr, func(t *testing.T) {
+			parsed, err := yearRangeMidpoint(dateStr)
+			if err != nil {
+				t.Fatalf("unexpected error: %s", err)
+			}
+			if !parsed.Equal(expectedParsedDate) {
+				t.Errorf("expected '%s' to parse as '%s' but got '%s'", dateStr, expectedParsedDate, parsed)
+			}
+		})
+	}
+}
+
+func TestCleanDate(t *testing.T) {
+	testCases := map[string]string{
+		"1st December 2010": "1 December 2010",
+		"2nd Feb 1810":      "2 February 1810",
+		"3rd  Sept  1900":   "3 September 1900",
+		"4th June 1890":     "4 June 1890",
+	}
+
+	for dateStr, expectedCleanedDateStr := range testCases {
+		t.Run(dateStr, func(t *testing.T) {
+			cleanedDateStr := cleanDate(dateStr)
+			if cleanedDateStr != expectedCleanedDateStr {
+				t.Errorf("expected '%s' to parse as '%s' but got '%s'", dateStr, expectedCleanedDateStr, cleanedDateStr)
+			}
+		})
+	}
+}
 func TestParseDate(t *testing.T) {
 	testCases := map[string]time.Time{
 		"2009":             time.Date(2009, 1, 1, 0, 0, 0, 0, time.Local),
@@ -152,8 +189,6 @@ func TestParseDate(t *testing.T) {
 		"Sep 1984":         time.Date(1984, 9, 1, 0, 0, 0, 0, time.Local),
 		"Sept 1984":        time.Date(1984, 9, 1, 0, 0, 0, 0, time.Local),
 		"2 Sept 1984":      time.Date(1984, 9, 2, 0, 0, 0, 0, time.Local),
-		"2005-2007":        time.Date(2006, 1, 1, 0, 0, 0, 0, time.UTC),
-		"2004 - 2007":      time.Date(2005, 7, 2, 0, 0, 0, 0, time.UTC),
 		"About 1800":       time.Date(1800, 1, 1, 0, 0, 0, 0, time.Local),
 		"about 1800":       time.Date(1800, 1, 1, 0, 0, 0, 0, time.Local),
 		"abt 1800":         time.Date(1800, 1, 1, 0, 0, 0, 0, time.Local),
@@ -171,7 +206,7 @@ func TestParseDate(t *testing.T) {
 				t.Fatalf("unexpected error: %s", err)
 			}
 			if !parsed.Equal(expectedParsedDate) {
-				t.Errorf("expected %s to parse as %s but got %s", dateStr, expectedParsedDate, parsed)
+				t.Errorf("expected '%s' to parse as '%s' but got '%s'", dateStr, expectedParsedDate, parsed)
 			}
 		})
 	}
