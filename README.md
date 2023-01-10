@@ -22,6 +22,12 @@ I had to manually tweak a couple of tiny details (e.g. header names) that weren'
 
 ## Usage
 
+By default the script just outputs the results in a human-readable format. The optional `--csv` flag can be passed with a desired filename in order to generate a .csv file in which all time durations are given as a number of days (which is easier for people to manipulate in Excel or whatever).
+
+```
+$ go run predict-death.go --tree-file tree.ged [--csv somefilename.csv]
+```
+
 Here's the cheerful result that I get using my own family tree:
 
 ```console

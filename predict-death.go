@@ -403,6 +403,38 @@ func getAncestors(individual *gedcom.IndividualRecord, ancestors map[*gedcom.Ind
 	return ancestors, nil
 }
 
+func writeCsv(ancestors []AncestorDeath, subject *gedcom.IndividualRecord, csvFileName string) {
+	if !strings.HasSuffix(csvFileName, ".csv") {
+		csvFileName = csvFileName + ".csv"
+	}
+	file, _ := os.Create(csvFileName)
+	defer file.Close()
+	writer := csv.NewWriter(file)
+	defer writer.Flush()
+
+	subjectName := gedcom.SplitPersonalName(subject.Name[0].Name).Full
+	writer.Write([]string{"Year", fmt.Sprintf("Generations removed from %s", subjectName), "Gender", "Age at death (days)", "Median Death Age Diff (days)", "Modal Death Age Diff (days)", "Modal Death Age (days)", "Median Death Age (days)"})
+
+	for _, ancestor := range ancestors {
+		ageAtDeath := ancestor.AgeAtDeathDaysTotal
+		medianDeathAgeDiff := ancestor.MedianAgeAtDeathDiffDays
+		modalDeathAgeDiff := ancestor.ModalAgeAtDeathDiffDays
+		modalDeathAge := ancestor.ModalDeathAgeDays
+		medianDeathAge := ancestor.MedianDeathAgeDays
+
+		writer.Write([]string{
+			strconv.Itoa(ancestor.Year),
+			strconv.Itoa(ancestor.GenerationsRemoved),
+			ancestor.Gender,
+			strconv.Itoa(ageAtDeath),
+			strconv.Itoa(medianDeathAgeDiff),
+			strconv.Itoa(modalDeathAgeDiff),
+			strconv.Itoa(modalDeathAge),
+			strconv.Itoa(medianDeathAge),
+		})
+	}
+}
+
 func main() {
 	var treeFile string
 	flag.StringVar(&treeFile, "tree-file", "", "path to GEDCOM tree file")
@@ -411,6 +443,10 @@ func main() {
 		fmt.Println("Error: --tree-file flag is required")
 		os.Exit(1)
 	}
+	var csvFile string
+	flag.StringVar(&csvFile, "csv", "", "path to CSV file")
+	flag.Parse()
+
 	maleDeathStats, err := parseDeathStats("male_death_stats.csv")
 	if err != nil {
 		fmt.Printf("Error parsing male death stats: %v", err)
@@ -435,4 +471,7 @@ func main() {
 
 	ancestorDeaths := getDeathStatsForAncestors(ancestors, maleDeathStats, femaleDeathStats)
 	printResults(ancestorDeaths, subject)
+	if csvFile != "" {
+		writeCsv(ancestorDeaths, subject, csvFile)
+	}
 }
