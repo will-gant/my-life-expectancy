@@ -9,6 +9,7 @@ import (
 	"math"
 	"os"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"text/tabwriter"
@@ -19,10 +20,13 @@ import (
 )
 
 type DeathStat struct {
-	Year             string
-	LifeExpectancy   float64
-	MedianAgeAtDeath float64
-	ModalAgeAtDeath  float64
+	Year                 string
+	LifeExpectancy       float64
+	LifeExpectancyDays   int
+	MedianAgeAtDeath     float64
+	MedianAgeAtDeathDays int
+	ModalAgeAtDeath      float64
+	ModalAgeAtDeathDays  int
 }
 
 type AncestorDeath struct {
@@ -35,6 +39,9 @@ type AncestorDeath struct {
 	LifeExpectancyDiffDays   int
 	MedianAgeAtDeathDiffDays int
 	ModalAgeAtDeathDiffDays  int
+	ModalDeathAgeDays        int
+	MedianDeathAgeDays       int
+	LifeExpectancyDays       int
 }
 
 var months = []string{"January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"}
@@ -203,23 +210,21 @@ func getDeathStatsForAncestors(ancestors map[*gedcom.IndividualRecord]int, maleD
 		} else {
 			deathStats = femaleDeathStats
 		}
-		earliestYear, err := earliestYear(deathStats)
-		if err != nil {
-			fmt.Printf("unable to find earliest year in death stats: %s\n", err)
-		}
-		if deathDate.Year() < earliestYear {
-			continue
-		}
+
 		var deathStat DeathStat
+		statsForYear := false
 		for _, ds := range deathStats {
 			if ds.Year == strconv.Itoa(deathDate.Year()) {
 				deathStat = ds
+				statsForYear = true
 				break
 			}
 		}
-		LifeExpectancyDays := int(deathStat.LifeExpectancy * 365)
-		MedianAgeAtDeathDays := int(deathStat.MedianAgeAtDeath * 365)
-		ModalAgeAtDeathDays := int(deathStat.ModalAgeAtDeath * 365)
+
+		if !statsForYear {
+			continue
+		}
+
 		ageAtDeathYears, ageAtDeathDays := daysToYearsAndDays(ageAtDeathDaysTotal)
 
 		ancestorDeaths = append(ancestorDeaths, AncestorDeath{
@@ -229,9 +234,12 @@ func getDeathStatsForAncestors(ancestors map[*gedcom.IndividualRecord]int, maleD
 			AgeAtDeathYears:          ageAtDeathYears,
 			AgeAtDeathDays:           ageAtDeathDays,
 			AgeAtDeathDaysTotal:      ageAtDeathDaysTotal,
-			LifeExpectancyDiffDays:   ageAtDeathDaysTotal - LifeExpectancyDays,
-			MedianAgeAtDeathDiffDays: ageAtDeathDaysTotal - MedianAgeAtDeathDays,
-			ModalAgeAtDeathDiffDays:  ageAtDeathDaysTotal - ModalAgeAtDeathDays,
+			LifeExpectancyDiffDays:   ageAtDeathDaysTotal - deathStat.LifeExpectancyDays,
+			MedianAgeAtDeathDiffDays: ageAtDeathDaysTotal - deathStat.MedianAgeAtDeathDays,
+			ModalAgeAtDeathDiffDays:  ageAtDeathDaysTotal - deathStat.ModalAgeAtDeathDays,
+			ModalDeathAgeDays:        deathStat.ModalAgeAtDeathDays,
+			MedianDeathAgeDays:       deathStat.MedianAgeAtDeathDays,
+			LifeExpectancyDays:       deathStat.LifeExpectancyDays,
 		})
 	}
 	return ancestorDeaths
@@ -263,19 +271,25 @@ func parseDeathStats(filepath string) ([]DeathStat, error) {
 
 		var s DeathStat
 		s.Year = record[0]
-		s.LifeExpectancy, err = strconv.ParseFloat(record[1], 64)
+		lifeExpectancy, err := strconv.ParseFloat(record[1], 64)
+		s.LifeExpectancy = lifeExpectancy
+		s.LifeExpectancyDays = int(lifeExpectancy * 365)
 		if err != nil {
 			fmt.Println("Error parsing life expectancy:", err)
 			return nil, err
 		}
 
-		s.MedianAgeAtDeath, err = strconv.ParseFloat(record[2], 64)
+		medianAgeAtDeath, err := strconv.ParseFloat(record[2], 64)
+		s.MedianAgeAtDeath = medianAgeAtDeath
+		s.MedianAgeAtDeathDays = int(medianAgeAtDeath * 365)
 		if err != nil {
 			fmt.Println("Error parsing median age at death:", err)
 			return nil, err
 		}
 
-		s.ModalAgeAtDeath, err = strconv.ParseFloat(record[3], 64)
+		modalAgeAtDeath, err := strconv.ParseFloat(record[3], 64)
+		s.ModalAgeAtDeath = modalAgeAtDeath
+		s.ModalAgeAtDeathDays = int(modalAgeAtDeath * 365)
 		if err != nil {
 			fmt.Println("Error parsing modal age at death:", err)
 			return nil, err
@@ -322,7 +336,7 @@ func daysToYearsAndDays(daysTotal int) (int, int) {
 	return years, days
 }
 
-func printResults(ancestors []AncestorDeath) {
+func printResults(ancestors []AncestorDeath, subject *gedcom.IndividualRecord) {
 	_, maleTotalMedianAgeAtDeathDiffDays, maleTotalModalAgeAtDeathDiffDays := calculateWeightedAverages(ancestors, "m")
 	_, femaleTotalMedianAgeAtDeathDiffDays, femaleTotalModalAgeAtDeathDiffDays := calculateWeightedAverages(ancestors, "f")
 	_, overallTotalMedianAgeAtDeathDiffDays, overallTotalModalAgeAtDeathDiffDays := calculateWeightedAverages(ancestors, "")
@@ -336,13 +350,37 @@ func printResults(ancestors []AncestorDeath) {
 	overallMedianAgeAtDeathYears, overallMedianAgeAtDeathDays := daysToYearsAndDays(overallTotalMedianAgeAtDeathDiffDays)
 	overallModalAgeAtDeathYears, overallModalAgeAtDeathDays := daysToYearsAndDays(overallTotalModalAgeAtDeathDiffDays)
 
+	subjectName := gedcom.SplitPersonalName(subject.Name[0].Name).Full
+
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+	fmt.Fprintln(w, "===========================================================================================")
+	fmt.Fprintln(w, "Longevity statistics for the direct ancestors of "+subjectName)
 	fmt.Fprintln(w, "===========================================================================================")
 	fmt.Fprintln(w, "Stat\tMale\tFemale\tOverall")
 	fmt.Fprintln(w, "Difference from Median Death Age\t"+strconv.Itoa(maleMedianAgeAtDeathYears)+" "+"years"+" "+strconv.Itoa(maleMedianAgeAtDeathDays)+" "+"days\t"+strconv.Itoa(femaleMedianAgeAtDeathYears)+" "+"years"+" "+strconv.Itoa(femaleMedianAgeAtDeathDays)+" "+"days\t"+strconv.Itoa(overallMedianAgeAtDeathYears)+" "+"years"+" "+strconv.Itoa(overallMedianAgeAtDeathDays)+" "+"days")
 	fmt.Fprintln(w, "Difference from Modal Age at Death\t"+strconv.Itoa(maleModalAgeAtDeathYears)+" "+"years"+" "+strconv.Itoa(maleModalAgeAtDeathDays)+" "+"days\t"+strconv.Itoa(femaleModalAgeAtDeathYears)+" "+"years"+" "+strconv.Itoa(femaleModalAgeAtDeathDays)+" "+"days\t"+strconv.Itoa(overallModalAgeAtDeathYears)+" "+"years"+" "+strconv.Itoa(overallModalAgeAtDeathDays)+" "+"days")
 	w.Flush()
 	fmt.Fprintln(w, "===========================================================================================")
+
+	sort.SliceStable(ancestors, func(i, j int) bool {
+		return ancestors[i].Year > ancestors[j].Year
+	})
+	fmt.Fprintln(w, "Year\tGenerations removed from subject\tGender\tAge at death\tMedian Death Age Diff\tModal Death Age Diff\tModal Death Age\tMedian Death Age")
+	for _, ancestor := range ancestors {
+		ageAtDeathYears, ageAtDeathDays := daysToYearsAndDays(ancestor.AgeAtDeathDaysTotal)
+		medianDeathAgeDiffYears, medianDeathAgeDiffDays := daysToYearsAndDays(ancestor.MedianAgeAtDeathDiffDays)
+		modalDeathAgeDiffYears, modalDeathAgeDiffDays := daysToYearsAndDays(ancestor.ModalAgeAtDeathDiffDays)
+		modalDeathAgeYears, modalDeathAgeDays := daysToYearsAndDays(ancestor.ModalDeathAgeDays)
+		medianDeathAgeYears, medianDeathAgeDays := daysToYearsAndDays(ancestor.MedianDeathAgeDays)
+		fmt.Fprintf(w, "%d\t%d\t%s\t%d years %d days\t%+d years %d days\t%+d years %d days\t%d years %d days\t%d years %d days\n",
+			ancestor.Year, ancestor.GenerationsRemoved, ancestor.Gender, ageAtDeathYears, ageAtDeathDays,
+			medianDeathAgeDiffYears, medianDeathAgeDiffDays,
+			modalDeathAgeDiffYears, modalDeathAgeDiffDays,
+			modalDeathAgeYears, modalDeathAgeDays,
+			medianDeathAgeYears, medianDeathAgeDays,
+		)
+	}
+	w.Flush()
 }
 
 func getAncestors(individual *gedcom.IndividualRecord, ancestors map[*gedcom.IndividualRecord]int, generation int) (map[*gedcom.IndividualRecord]int, error) {
@@ -396,5 +434,5 @@ func main() {
 	}
 
 	ancestorDeaths := getDeathStatsForAncestors(ancestors, maleDeathStats, femaleDeathStats)
-	printResults(ancestorDeaths)
+	printResults(ancestorDeaths, subject)
 }

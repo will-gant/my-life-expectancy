@@ -43,7 +43,7 @@ func TestCheckValidYear(t *testing.T) {
 
 func TestGetDeathStatsForAncestors(t *testing.T) {
 	maleDeathStats := []DeathStat{
-		{Year: "1900", LifeExpectancy: 40.0, MedianAgeAtDeath: 40.0, ModalAgeAtDeath: 40.0},
+		{Year: "1900", LifeExpectancy: 40.0, LifeExpectancyDays: int(40.0) * 365, MedianAgeAtDeath: 40.0, MedianAgeAtDeathDays: int(40.0) * 365, ModalAgeAtDeath: 40.0, ModalAgeAtDeathDays: int(40.0) * 365},
 		{Year: "1950", LifeExpectancy: 49.3, MedianAgeAtDeath: 46.5, ModalAgeAtDeath: 43.8},
 	}
 
@@ -130,6 +130,9 @@ func TestGetDeathStatsForAncestors(t *testing.T) {
 					LifeExpectancyDiffDays:   10,
 					MedianAgeAtDeathDiffDays: 10,
 					ModalAgeAtDeathDiffDays:  10,
+					ModalDeathAgeDays:        14600,
+					MedianDeathAgeDays:       14600,
+					LifeExpectancyDays:       14600,
 				},
 			},
 		},
