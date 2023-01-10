@@ -1,18 +1,29 @@
 # My life expectancy
 
+## Contents
+1. [Background](#background)
+1. [Data sources](#data-sources)
+1. [Assumptions and limitations](#assumptions-and-limitations)
+1. [Usage](#usage)
+1. [Tests](#tests)
+
+## Background
+
 Go script to benchmark the longevity of the direct descendents of the first individual in a [GEDCOM](https://www.gedcom.org/) family tree file (i.e. me) against modal and median death ages for the United Kingdom for each ancestor's year of death. For all ancestors who died in years for which ONS statistics are available (i.e. 1841-2010), the diff from the modal and median death ages is calculated. An average is then calculated that weights each ancestor's diff based on their proximity to the first individual in the tree. i.e. the diffs for my grandparents have twice the weight of those of my great-grandparents, which in turn have twice the weight of those of my great-great-grandparents, etc. As the number of individuals doubles with each generation you go back, that means that _collectively_ the diffs for a given generation carry the same weight as those for any another.
 
 GEDCOM files (with a `.ged` extension) can be exported from a number of genealogy websites, such as ancestry.com. I gradually built my own tree over several months, and in my case I have 78 director ancestors who died in a year covered by the ONS statistics, stretching back seven generations (i.e. back to great-great-great-great-great-grandparents).
 
 I previously implemented a simpler version of this in ruby that used a CSV generated from my GEDCOM file by [Gramps](https://gramps-project.org/), but this resulted in the information on generational proximity being lost. As the ruby GEDCOM libraries that I tried seemed like they themselves had passed on to a better place and seemed unable to read my `.ged` file without exploding, I looked at other languages and found a [nice Go package](https://github.com/iand/gedcom) that seemed to be actively maintained and did the job.
 
+<a href="#contents">Back to top</a>
 ## Data sources
 
 Historical data on UK mortality come in `.csv` files bundled with a [statistical release](https://web.archive.org/web/20221124074230/https://www.ons.gov.uk/peoplepopulationandcommunity/birthsdeathsandmarriages/lifeexpectancies/articles/mortalityinenglandandwales/pastandprojectedtrendsinaveragelifespan) of the UK's Office of National Statistics entitled _Mortality in England and Wales: past and projected trends in average lifespan_, published on 5 July 2022.
 
 I had to manually tweak a couple of tiny details (e.g. header names) that weren't exactly consistent between the male and female files published by the ONS.
 
-## Assumptions/limitations
+<a href="#contents">Back to top</a>
+## Assumptions and limitations
 
 * Assumes a death date of 1 January where the dataset gives only a year
 * Similarly, where only a month and a year are available, assumes the death occured on the 1st of that month
@@ -20,6 +31,7 @@ I had to manually tweak a couple of tiny details (e.g. header names) that weren'
 * Ignores leap years (i.e. assumes years are all 365 days long)
 * Obviously, uses UK death statistics for all ancestors. Apart from the amount of effort that'd be required in obtaining equivalent stats for other countries (assuming they even exist), trying to decide _which_ country's statistics to apply to a given ancestor would be a nightmare. I guess in an ideal world you'd use whichever country they spent the most time in, but suffice to say this is rarely available. Even when locations are given for deaths, births, etc, these may omit the country entirely (e.g. only give a town/city) or use a range of different names (e.g. "England", "United Kingdom" and "UK").
 
+<a href="#contents">Back to top</a>
 ## Usage
 
 By default the script just outputs the results in a human-readable format. The optional `--csv` flag can be passed with a desired filename in order to generate a .csv file in which all time durations are given as a number of days (which is easier for people to manipulate in Excel or whatever).
@@ -121,6 +133,7 @@ Year  Generations removed from subject  Gender  Age at death       Median Death 
 1841  7                                 f       79 years 327 days  +32 years 211 days     +2 years 269 days     77 years 58 days   47 years 116 days
 ```
 
+<a href="#contents">Back to top</a>
 ## Tests
 
 ```console
@@ -128,3 +141,4 @@ $ go test
 PASS
 ok  	predict-death	0.153s
 ```
+<a href="#contents">Back to top</a>
