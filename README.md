@@ -25,11 +25,12 @@ I had to manually tweak a couple of tiny details (e.g. header names) that weren'
 <a href="#contents">Back to top</a>
 ## Assumptions and limitations
 
+* Ignores leap years (i.e. assumes years are all 365 days long)
+* The ONS stats are expressed in terms of years to the nearest two decimal points (e.g. "78.34"). I'm using floating point arithmetic to convert these into a number of days (as an integer), which makes these calculations slightly imprecise.
 * Assumes a death date of 1 January where the dataset gives only a year
 * Similarly, where only a month and a year are available, assumes the death occured on the 1st of that month
 * Excludes ancestors for whom no birth or death year is available (a range of years is acceptable - e.g. `1905-1907`).
 * Where a death date is recorded as a range of years, assumes that the death date is the day that falls halfway between the two
-* Ignores leap years (i.e. assumes years are all 365 days long)
 * Hardcoded to use UK death statistics for all ancestors. Apart from the amount of effort that'd be required in obtaining equivalent stats for other countries (assuming they even exist), trying to decide _which_ country's statistics to apply to a given ancestor would be a nightmare. I guess in an ideal world you'd use whichever country they spent the most time in, but suffice to say this is rarely available. Even when locations are given for deaths, births, etc, these may omit the country entirely (e.g. only give a town/city) or use a range of different names (e.g. "England", "United Kingdom" and "UK").
 
 <a href="#contents">Back to top</a>
